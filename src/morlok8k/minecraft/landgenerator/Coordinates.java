@@ -1,200 +1,86 @@
 package morlok8k.minecraft.landgenerator;
 
+import java.util.regex.*;
+
 /**
- * Coordinates are in the form of [X,Y,Z] or (X,Z)<br>
+ * Coordinates are in the form of [x,y,z] or (X,Z)<br>
  * <br>
  * x-axis (longitude): the distance east (positive) or west (negative) of the origin point<br>
  * z-axis (latitude): the distance south (positive) or north (negative) of the origin point<br>
  * y-axis (elevation): how high or low (from 0 to 255 (previously 128), with 64 being sea level) <br>
- * The origin point: When both X and Z are both zero. (elevation is irrelevant)<br>
+ * The origin point: When both x and z are both zero. (elevation is irrelevant)<br>
  */
 public class Coordinates {
-	//FYI: int's (Integer's) are good enough for Minecraft.  They have a range of -2,147,483,648 to 2,147,483,647
+	//FyI: int's (Integer's) are good enough for Minecraft.  They have a range of -2,147,483,648 to 2,147,483,647
 	//		Minecraft starts failing around (+/-) 12,550,820 and ends at either (+/-) 30,000,000 or (+/-) 32,000,000 (depending on the version).
 	// See: http://www.minecraftwiki.net/wiki/Far_Lands for more info.
+    //If you need more, just use longs which should be just as fast on 64-bit (i.e. most modern) machines.
 
-	public int X = 0;
-	public int Y = 0;
-	public int Z = 0;
+	private int x = 0;
+	private int y = 0;
+	private int z = 0;
 
-	/**
-	 * @param x
-	 * @param y
-	 * @param z
-	 */
 	public Coordinates(int x, int y, int z) {
-		super();
-		X = x;
-		Y = y;
-		Z = z;
+		this.x = x;
+		this.y = y;
+		this.z = z;
 	}
 
-	/**
-	 * Someone created a new blank Coordinate! Lets set it to be [0,0,0].
-	 */
-	public Coordinates() {
-		clear();
-	}
-
-	/**
-	 * @return the x
-	 */
 	public int getX() {
-		return X;
+		return x;
 	}
 
-	/**
-	 * @return the y
-	 */
 	public int getY() {
-		return Y;
+		return y;
 	}
 
-	/**
-	 * @return the z
-	 */
 	public int getZ() {
-		return Z;
+		return z;
 	}
 
-	/**
-	 * @param x
-	 *            the x to set
-	 */
 	public void setX(int x) {
-		X = x;
+		x = x;
 	}
 
-	/**
-	 * @param y
-	 *            the y to set
-	 */
 	public void setY(int y) {
-		Y = y;
+		y = y;
 	}
 
-	/**
-	 * @param z
-	 *            the z to set
-	 */
 	public void setZ(int z) {
-		Z = z;
+		z = z;
 	}
 
-	public void clear() {
-		X = 0;
-		Y = 0;
-		Z = 0;
+    /**
+     * Parses a Coordinates object from a String. Leading and trailing garbage is ignored (FIXME).
+     * @param s A short- or long-form coordinate string as described at the two toString() methods
+     * @throws IllegalArgumentException if s does not match a short or long form coordinate
+     */
+	public static Coordinates parseString(String s) {
+        Matcher shortForm = Pattern.compile("\\((\\d+),(\\d+)\\)").matcher(s);
+        if(shortForm.matches()){
+            return new Coordinates(Interger.parseInt(shortForm.group(1)), 64, Integer.parseInt(shortForm.group(2)));
+        }
+        Matcher normalForm = Pattern.compile("\\[(\\d+),(\\d+),(\\d+)\\]").matcher(s);
+        if(normalForm.matches()){
+            return new Coordinates(Interger.parseInt(shortForm.group(1)), Integer.parseInt(shortForm.group(2)), Integer.parseInt(shortForm.group(3)));
+        }
+        throw new InvalidArgumentException("Invalid coordinate format: "+s);
 	}
 
-	public static Coordinates parseString(String StringOfCoords) {
-		//parse out string
-		StringOfCoords = StringOfCoords.trim();
-
-		int x = 0, y = 0, z = 0;
-
-		//TODO: add validity checks:
-		//TODO: add short version...  (Y = 64)
-
-		int start = 0, end = 0, firstComma = 0, secComma = 0;
-		String sX = "", sY = "", sZ = "";
-		boolean shortMode = false, notCoords = false;
-
-		start = StringOfCoords.indexOf("[");
-		end = StringOfCoords.indexOf("]");
-
-		if ((start == -1) || (end == -1)) {
-			start = StringOfCoords.indexOf("(");
-			end = StringOfCoords.indexOf(")");
-
-			if ((start != -1) || (end != -1)) {
-				shortMode = true;
-			} else {
-				notCoords = true;
-			}
-		}
-
-		if (notCoords) { return new Coordinates(0, 0, 0); }
-
-		if (shortMode) {
-
-			StringOfCoords = StringOfCoords.substring(start, end);
-
-			firstComma = StringOfCoords.indexOf(",");
-
-			sX = StringOfCoords.substring(start + 1, firstComma);
-			sY = "64";
-			sZ = StringOfCoords.substring(firstComma + 1, end);
-
-		} else {
-
-			StringOfCoords = StringOfCoords.substring(start, end);
-
-			firstComma = StringOfCoords.indexOf(",");
-			secComma = StringOfCoords.lastIndexOf(",");
-
-			sX = StringOfCoords.substring(start + 1, firstComma);
-			sY = StringOfCoords.substring(firstComma + 1, secComma);
-			sZ = StringOfCoords.substring(secComma + 1, end);
-
-		}
-
-		try {
-			x = Integer.parseInt(sX);
-			y = Integer.parseInt(sY);
-			z = Integer.parseInt(sZ);
-		} catch (NumberFormatException e) {
-			return new Coordinates(0, 0, 0);
-		}
-
-		return new Coordinates(x, y, z);
-	}
-
-	///////////////////////////////////////////////////////////////////////////////////////
-	// Java Language Specific Crap Below...  Stuff *gotta* be there so Java won't cry... //
-	///////////////////////////////////////////////////////////////////////////////////////
-
-	/* (non-Javadoc)
-	 * @see java.lang.Object#toString()
+    /**
+     * @return A string representation of the form [x,y,z]
 	 */
 	@Override
 	public String toString() {
-		// I am overriding the inherited toString method.
-		// Because it doesn't know how to deal with my custom data.
-		// So instead of getting "blahblahblah.Coordinates@745f"
-		//		(the location of the class and the hexstring of the hashcode)
-		// I return "[X,Y,Z]" 
-
-		return ("[" + X + "," + Y + "," + Z + "]");
+		return ("[" + x + "," + y + "," + z + "]");
 
 	}
 
-	public String toString(boolean Short) {
-		if (Short) {								// We are overloading toString with an additional option:
-			return ("(" + X + "," + Z + ")");		// Basically just an option to return just X and Z  (formatted differently as well: "(X,Z)")
-		}
-		return toString();							// Idiot catch.  default to: "[X,Y,Z]"
-
-	}
-
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		// I am overriding the inherited hashCode method.
-		// Because it doesn't know how to deal with my custom data.
-		// So instead of getting who knows what, we return valid data
-
-		final int prime = 31;			// My hard coded prime number
-		int result = 1;					// The hard coded number I start with
-		result = prime * result + X;	// Add the X data
-		result = prime * result + Y;	// Add the Y data
-		result = prime * result + Z;	// Add the Z data
-		return result;			//this result will consistently give the same result for the same data.
-		// [0,0,0] will always give 29791.  [1,2,3] will always give 30817.
-		//yes, If I was lazy, I could just do a "return 0;" and it would still be technically valid.
-		//but if I'm going override the method, I might as well do it right...
+    /**
+     * @return A short string representation containing just X and Z values (no height value) of the form (x,z)
+     */
+	public String toStringShort() {
+        return ("(" + x + "," + z + ")");
 	}
 
 	/* (non-Javadoc)
@@ -202,26 +88,13 @@ public class Coordinates {
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		// I am overriding the inherited equals method.
-		// Because it doesn't know how to deal with my custom data.
-		// So instead of always failing, it actually works!
-		//		(by default it gets the memory addresses of each object.)
+		if(obj == null)
+            return false;
+		if(!obj instanceof Coordinates)
+            return false;
 
-		// An object must equal itself
-		if (this == obj) return true;
-
-		// No object equals null
-		if (obj == null) return false;
-		if (this == null) return false;
-
-		// Objects of different types are never equal
-		if (getClass() != obj.getClass()) return false;
-
-		// Cast to an Coordinates, then compare the data
-		Coordinates c = (Coordinates) obj;
-		if (X != c.X) return false;
-		if (Y != c.Y) return false;
-		if (Z != c.Z) return false;
-		return true;			// If none of the above returned something, they must be equal!
-	}
+		Coordinates c = (Coordinates)obj;
+		if (x == c.getX() && y == c.getY() && z == c.getZ())
+            return true;
+        return false;
 }
